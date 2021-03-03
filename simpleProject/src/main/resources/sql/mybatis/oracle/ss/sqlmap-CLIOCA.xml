@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CLIOCA">
+
+	<select id="select" parameterType="hashmap" resultType="hashmap">
+		 SELECT LOCA_CD
+		 	   ,UP_LOCA_CD
+		 	   ,LOCA_NM
+		 	   ,ARYL_ORD
+		   FROM TN_TE_CLILOCA
+   		  ORDER BY ARYL_ORD ASC
+	</select>
+	
+	<select id="selectOne" parameterType="hashmap" resultType="hashmap">
+		 SELECT LOCA_CD
+		 	   ,UP_LOCA_CD
+		 	   ,LOCA_NM
+		 	   ,ARYL_ORD
+		 	   ,USE_YN
+		 	   ,LOCA_LVL
+		   FROM TN_TE_CLILOCA
+		  WHERE LOCA_CD = #{LOCA_CD}
+	</select>
+	
+	<!--  중복체크 -->
+	<select id="DupCheck" parameterType="String" resultType="String">
+		 SELECT LOCA_CD
+		   FROM TN_TE_CLILOCA
+		  WHERE LOCA_CD = #{LOCA_CD}
+	</select>
+	
+
+	<delete id="deleteCliloca" parameterType="hashmap">
+	DELETE FROM TN_TE_CLILOCA 
+	 WHERE LOCA_CD IN ( SELECT LOCA_CD
+		    			  FROM TN_TE_CLILOCA
+					     START WITH LOCA_CD = #{LOCA_CD}
+					   CONNECT BY PRIOR LOCA_CD = UP_LOCA_CD )
+	</delete>
+
+
+	
+	<!--  수정 -->
+	<insert id="modifyCliloca" parameterType="hashmap">
+		<![CDATA[
+		/*modifyCliloca*/
+   		MERGE INTO TN_TE_CLILOCA
+	    USING DUAL
+		   ON (LOCA_CD = #{LOCA_CD})
+		 WHEN MATCHED THEN
+			  UPDATE 
+			     SET FNL_MDFC_DTM = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+			        ,LOCA_NM = #{LOCA_NM}
+			        ,USE_YN = #{USE_YN}
+			        ,ARYL_ORD = #{ARYL_ORD}
+		 WHEN NOT MATCHED THEN
+		      INSERT ( 
+					 LOCA_CD
+					,LOCA_NM
+					,UP_LOCA_CD
+					,FNL_MDFC_DTM
+					,FST_RGST_DTM
+					,LOCA_LVL
+					,USE_YN
+					,ARYL_ORD
+					 )
+		      VALUES (
+		      	     #{LOCA_CD}
+		      	    ,#{LOCA_NM}
+					,#{UP_LOCA_CD}
+					,TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+					,TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+					,#{LOCA_LVL}
+					,#{USE_YN}
+					,#{ARYL_ORD}
+					 )
+	    ]]>
+	</insert>	
+	
+	<select id="selectLocaNm" parameterType="hashmap" resultType="com.mycompany.dto.ClilocaDTO">
+			SELECT A.COUNT
+				  ,B.LOCA_NM 
+				  ,B.LOCA_CD
+			  FROM ( SELECT COUNT(*) AS COUNT
+								  FROM TN_TE_SENSOR_RGST A
+								  WHERE A.UP_LOCA_CD IN (SELECT LOCA_CD
+													 	   FROM TN_TE_CLILOCA B
+													 	  START WITH B.LOCA_CD = #{LOCA_CD}
+													    CONNECT BY NOCYCLE
+													   	  PRIOR B.LOCA_CD = B.UP_LOCA_CD ) 
+							  ) A
+							 ,( SELECT LOCA_NM AS LOCA_NM
+							          ,LOCA_CD AS LOCA_CD
+							 	  FROM TN_TE_CLILOCA 
+							 	 WHERE LOCA_CD = #{LOCA_CD} ) B
+	</select>
+		
+	<select id="selectLvl" resultType="hashmap">
+		SELECT LOCA_CD
+		  FROM TN_TE_CLILOCA
+		 WHERE LOCA_LVL = '1'
+	</select>
+</mapper>

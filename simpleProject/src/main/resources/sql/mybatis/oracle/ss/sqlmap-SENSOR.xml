@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SENSOR">
+	<select id="checked"  parameterType="hashmap" resultType="hashmap">
+     	SELECT LOCA_CD
+     		  ,SENSOR_CD
+			  ,SENSOR_NM
+			  ,SENSOR_TYPE
+			  ,ALARM_IMPRT
+			  ,ALARM_YN
+			  ,COORDINATES
+			  ,SUBSTR(FNL_MDFC_DTM, 0,4) || '-' || SUBSTR(FNL_MDFC_DTM, 5, 2) || '-' || SUBSTR(FNL_MDFC_DTM, 7, 2) AS FNL_MDFC_DTM
+		  FROM TN_TE_SENSOR_RGST
+	</select>
+	
+	<!-- 항목 클릭시 -->
+	<select id="sesnsorDtl"  parameterType="hashmap" resultType="hashmap">
+		SELECT A.LOCA_CD
+			  ,A.UP_LOCA_CD
+		      ,A.SENSOR_CD
+		      ,A.SENSOR_NM
+		      ,A.SENSOR_TYPE
+		      ,A.ALARM_IMPRT
+		      ,A.ALARM_YN
+		      ,A.COORDINATES
+		  	  ,SUBSTR(A.FNL_MDFC_DTM, 0, 4) || '-' || SUBSTR(A.FNL_MDFC_DTM, 5, 2) || '-' || SUBSTR(A.FNL_MDFC_DTM, 7, 2) AS FNL_MDFC_DTM
+		 FROM TN_TE_SENSOR_RGST A
+		WHERE A.UP_LOCA_CD IN (SELECT LOCA_CD
+								 FROM TN_TE_CLILOCA B
+								START WITH B.LOCA_CD = #{LOCA_CD}
+							  CONNECT BY NOCYCLE
+								PRIOR B.LOCA_CD = B.UP_LOCA_CD )
+	</select>
+	
+	<!--  지도 갑 전달 -->
+	<select id="mapInfo"  parameterType="hashmap" resultType="hashmap">
+		SELECT LOCA_CD
+		 	  ,SENSOR_CD
+			  ,SENSOR_NM
+  			  ,ALARM_YN
+  			  ,COORDINATES
+		  FROM TN_TE_SENSOR_RGST A
+		 WHERE LOCA_CD = #{LOCA_CD}
+	</select>
+	
+	
+	<delete id="delete" parameterType="hashmap">
+		DELETE FROM TN_TE_SENSOR_RGST
+		 WHERE LOCA_CD = #{LOCA_CD}
+	</delete>
+	
+	<!-- 센서 등록 및 수정-->
+	<insert id="insertSensor" parameterType="hashmap">
+		<![CDATA[
+			/* insertSensor */
+			MERGE INTO TN_TE_SENSOR_RGST
+		    USING DUAL
+			   ON (LOCA_CD = #{LOCA_CD})
+			 WHEN MATCHED THEN
+				  UPDATE 
+				     SET FNL_MDFC_DTM = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+				        ,COORDINATES = #{COORDINATES}
+			 WHEN NOT MATCHED THEN
+			      INSERT ( 
+						 LOCA_CD
+						,UP_LOCA_CD
+						,FNL_MDFC_DTM
+						,FST_RGST_DTM
+						 )
+			      VALUES (
+			      	     #{UP_LOCA_CD} || '-' || LPAD(TN_TE_LOCA_CD.NEXTVAL, 3, 0)
+						,#{UP_LOCA_CD}
+						,TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+						,TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+						 )
+		]]>	
+	</insert>
+	
+	<update id="updateSensor" parameterType="hashmap">
+		 UPDATE TN_TE_SENSOR_RGST
+		    SET FNL_MDFC_DTM = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+		        ,SENSOR_CD = #{SENSOR_CD}
+		        ,SENSOR_NM = #{SENSOR_NM}
+		        ,SENSOR_TYPE = #{SENSOR_TYPE}
+		        ,ALARM_IMPRT = #{ALARM_IMPRT}
+		        ,ALARM_YN = #{ALARM_YN}
+		  WHERE LOCA_CD = #{LOCA_CD}
+	</update>	
+</mapper>
